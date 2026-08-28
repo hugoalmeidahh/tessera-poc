@@ -1,0 +1,84 @@
+{
+  "name": "vault-app",
+  "productName": "Arquivos",
+  "version": "0.0.1",
+  "description": "Cofre de arquivos com notas, desenho, banco e IA local",
+  "license": "ISC",
+  "author": "hugo almeida",
+  "homepage": "https://github.com/hugoalmeida/arquivos",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "start": "node start.js",
+    "dist": "electron-builder --linux --win",
+    "dist:linux": "electron-builder --linux",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "build": {
+    "appId": "br.com.hugo.arquivos",
+    "productName": "Arquivos",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "vault.js",
+      "config.js",
+      "chat.js",
+      "code-editor.js",
+      "database.js",
+      "draw.js",
+      "graph.js",
+      "links.js",
+      "llm-worker.js",
+      "local-llm.js",
+      "markdown.js",
+      "table.js",
+      "node_modules/monaco-editor/min/**",
+      "node_modules/@huggingface/transformers/dist/**",
+      "node_modules/onnxruntime-web/dist/**",
+      "!node_modules/@huggingface/transformers/dist/**/*.map",
+      "!node_modules/onnxruntime-web/dist/**/*.map"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "maintainer": "hugo almeida"
+    },
+    "win": {
+      "target": [
+        "zip"
+      ],
+      "signAndEditExecutable": false
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^43.4.1",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
+    "monaco-editor": "^0.56.0"
+  }
+}

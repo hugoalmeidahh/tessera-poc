@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: vault-file:; font-src 'self' data:; worker-src 'self' blob: data:; frame-src 'self' blob: vault-preview: vault-file:; connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co"
+    />
+    <title>Arquivos</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="node_modules/monaco-editor/min/vs/editor/editor.main.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="titlebar" id="titlebar" hidden>
+        <div class="titlebar__left">
+          <span class="titlebar__vault" id="titlebar-vault">Arquivos</span>
+        </div>
+        <div class="titlebar__drag" id="titlebar-drag"></div>
+        <div class="titlebar__center">
+          <button class="titlebar__crumb" id="titlebar-crumb" type="button" title="Buscar arquivo (Ctrl+P)">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="7" cy="7" r="4.5" />
+              <path d="M10.5 10.5 14 14" stroke-linecap="round" />
+            </svg>
+            <span id="titlebar-title">Arquivos</span>
+          </button>
+        </div>
+        <div class="titlebar__drag" id="titlebar-drag-end"></div>
+        <div class="titlebar__right">
+          <div class="window-controls" id="window-controls" hidden>
+            <button type="button" id="win-min" title="Minimizar">
+              <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 5h8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+            <button type="button" id="win-max" title="Maximizar">
+              <svg class="win-max-icon" viewBox="0 0 10 10" aria-hidden="true"><rect x="1.4" y="1.4" width="7.2" height="7.2" rx="0.6" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+              <svg class="win-restore-icon" viewBox="0 0 10 10" aria-hidden="true"><path d="M2.4 3.2h4.4v4.4H2.4zM3.4 2.2h4.4v4.4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            </button>
+            <button type="button" class="window-controls__close" id="win-close" title="Fechar">
+              <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2 2 8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <header class="toolbar">
+        <div class="toolbar__sidebar">
+          <button class="icon-btn" id="toggle-sidebar" title="Ocultar pastas" type="button">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+              <path d="M6 2.5v11" />
+            </svg>
+          </button>
+        </div>
+        <div class="gutter" data-gutter="sidebar"></div>
+        <div class="toolbar__list">
+          <div class="list-title-wrap">
+            <button class="icon-btn sidebar-toggle-list" id="toggle-sidebar-list" title="Mostrar pastas" type="button">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+                <path d="M6 2.5v11" />
+              </svg>
+            </button>
+            <div class="list-heading" id="list-heading">Todos Arquivos</div>
+            <label class="search" id="search-wrap">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+                <circle cx="7" cy="7" r="4.5" />
+                <path d="M10.5 10.5 14 14" stroke-linecap="round" />
+              </svg>
+              <input id="search" type="search" placeholder="Buscar no cofre" autocomplete="off" />
+            </label>
+          </div>
+          <div class="split-btn" id="new-file-wrap">
+            <button class="icon-btn" id="new-file" title="Novo arquivo Markdown" type="button">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M8 3.2v9.6M3.2 8h9.6" stroke-linecap="round" />
+              </svg>
+            </button>
+            <button class="icon-btn icon-btn--caret" id="new-file-menu" title="Tipo de arquivo" type="button">
+              <svg viewBox="0 0 12 12" fill="currentColor">
+                <path d="M2.4 4.2 6 8l3.6-3.8H2.4Z" />
+              </svg>
+            </button>
+            <div class="menu" id="format-menu" hidden>
+              <button type="button" data-create="md">Markdown (.md)</button>
+              <button type="button" data-create="txt">Texto (.txt)</button>
+              <button type="button" data-create="html">HTML (.html)</button>
+              <button type="button" data-create="db">Base de dados</button>
+              <button type="button" data-create="draw">Desenho</button>
+              <div class="menu__sep"></div>
+              <button type="button" data-import="1">Importar arquivos…</button>
+            </div>
+          </div>
+          <button class="icon-btn" id="trash-file-list" title="Mover para a lixeira" type="button">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M3 4.5h10M6 4.5V3.2A1.2 1.2 0 0 1 7.2 2h1.6A1.2 1.2 0 0 1 10 3.2v1.3M5.2 6.2v6.1A1.2 1.2 0 0 0 6.4 13.5h3.2a1.2 1.2 0 0 0 1.2-1.2V6.2" stroke-linecap="round" />
+            </svg>
+          </button>
+          <button class="text-btn" id="empty-trash" hidden type="button" title="Apagar tudo da lixeira">Esvaziar</button>
+        </div>
+        <div class="gutter" data-gutter="list"></div>
+        <div class="toolbar__editor">
+          <div class="toolbar__cluster">
+            <button class="icon-btn back-btn" id="back-to-list" title="Voltar à lista" type="button">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M10 3.5 5.5 8 10 12.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <button class="icon-btn" id="trash-file" title="Mover para a lixeira" type="button">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M3 4.5h10M6 4.5V3.2A1.2 1.2 0 0 1 7.2 2h1.6A1.2 1.2 0 0 1 10 3.2v1.3M5.2 6.2v6.1A1.2 1.2 0 0 0 6.4 13.5h3.2a1.2 1.2 0 0 0 1.2-1.2V6.2" stroke-linecap="round" />
+              </svg>
+            </button>
+            <button class="icon-btn" id="reveal-file" title="Abrir no gerenciador de arquivos" type="button">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M2.4 4.2c0-.8.6-1.4 1.4-1.4h3l1.1 1.4h4.3c.8 0 1.4.6 1.4 1.4v6.2c0 .8-.6 1.4-1.4 1.4H3.8c-.8 0-1.4-.6-1.4-1.4V4.2Z" />
+              </svg>
+            </button>
+          </div>
+          <div class="toolbar__cluster">
+            <div class="seg" id="view-mode" hidden>
+              <button type="button" data-for="md" data-view="edit" class="is-active">Editar</button>
+              <button type="button" data-for="md" data-view="preview">Preview</button>
+              <button type="button" data-for="html" data-view="edit" hidden>Editar</button>
+              <button type="button" data-for="html" data-view="preview" hidden>Preview</button>
+              <button type="button" data-for="db" data-view="table" hidden>Tabela</button>
+              <button type="button" data-for="db" data-view="code" hidden>Código</button>
+              <button type="button" data-for="db" data-view="sql" hidden>SQL</button>
+              <button type="button" data-for="db" data-view="diagram" hidden>Diagrama</button>
+              <button type="button" data-for="db" data-view="prisma" hidden>Prisma</button>
+            </div>
+            <button class="text-btn" id="export-prisma" hidden type="button" title="Exportar schema Prisma">
+              Exportar
+            </button>
+            <button class="text-btn" id="import-schema" hidden type="button" title="Importar Prisma, SQL ou DBMS">
+              Importar
+            </button>
+            <input id="import-schema-file" type="file" accept=".prisma,.sql,.dbms,.mmd,.txt" hidden />
+            <button class="icon-btn" id="toggle-chat" title="Chat com IA" type="button">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M2.5 4.2c0-.9.7-1.6 1.6-1.6h7.8c.9 0 1.6.7 1.6 1.6v5.1c0 .9-.7 1.6-1.6 1.6H7l-3.2 2.4v-2.4h-.7c-.9 0-1.6-.7-1.6-1.6V4.2Z" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <button class="icon-btn" id="toggle-graph" title="Grafo do cofre" type="button">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                <circle cx="3.5" cy="4" r="1.8" /><circle cx="12.5" cy="3.8" r="1.8" /><circle cx="8" cy="12" r="1.8" />
+                <path d="M5 4.6l5.8-.5M4.4 5.6 7 10.3M11.4 5.4 9 10.4" stroke-linecap="round" />
+              </svg>
+            </button>
+            <button class="icon-btn" id="toggle-details" title="Detalhes do arquivo" type="button">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                <circle cx="8" cy="8" r="6" /><path d="M8 7.2v4M8 5.1v.6" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="preview-banner" id="preview-banner" hidden>
+        Preview no navegador — arquivos não gravam no disco. Use <code>npm run start</code>.
+      </div>
+
+      <div class="workspace">
+        <div class="folders-scrim" id="folders-scrim" hidden></div>
+        <aside class="pane-sidebar" id="sidebar">
+          <div class="section">
+            <div class="section__head">
+              <div class="section__label">PASTAS</div>
+              <button class="icon-btn" id="new-folder" title="Nova pasta" type="button">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M8 3.5v9M3.5 8h9" stroke-linecap="round" />
+                </svg>
+              </button>
+            </div>
+            <div id="folders"></div>
+          </div>
+          <div class="sidebar__foot">
+            <button class="vault-path" id="vault-switch" type="button" title="Cofres"></button>
+            <button class="icon-btn" id="open-settings" title="Configurações" type="button">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                <circle cx="8" cy="8" r="2.2" />
+                <path d="M8 1.6v1.8M8 12.6v1.8M2.6 8H1.2M14.8 8h-1.4M4.2 4.2 3.2 3.2M12.8 12.8l-1-1M11.8 4.2l1-1M3.2 12.8l1-1" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
+        </aside>
+        <div class="gutter" data-gutter="sidebar"></div>
+        <section class="pane-list">
+          <div class="files" id="files"></div>
+        </section>
+        <div class="gutter" data-gutter="list"></div>
+        <main class="pane-editor">
+          <div class="tabs" id="tabs" hidden></div>
+          <div class="editor-empty is-visible" id="editor-empty">Nenhum arquivo selecionado</div>
+          <article class="editor" id="editor">
+            <div class="elements" id="elements-bar" hidden>
+              <button type="button" data-el="h1" title="Título 1">H1</button>
+              <button type="button" data-el="h2" title="Título 2">H2</button>
+              <button type="button" data-el="h3" title="Título 3">H3</button>
+              <span class="elements__sep"></span>
+              <button type="button" data-el="bold" title="Negrito"><b>B</b></button>
+              <button type="button" data-el="italic" title="Itálico"><i>I</i></button>
+              <button type="button" data-el="strike" title="Riscado"><s>S</s></button>
+              <button type="button" data-el="code" title="Código">&lt;/&gt;</button>
+              <span class="elements__sep"></span>
+              <button type="button" data-el="ul" title="Lista">•</button>
+              <button type="button" data-el="ol" title="Lista numerada">1.</button>
+              <button type="button" data-el="todo" title="Checklist">☑</button>
+              <button type="button" data-el="quote" title="Citação">❝</button>
+              <span class="elements__sep"></span>
+              <button type="button" data-el="link" title="Link">🔗</button>
+              <button type="button" data-el="wikilink" title="Wikilink [[ ]]">[[ ]]</button>
+              <button type="button" data-el="table" title="Tabela">▦</button>
+              <button type="button" data-el="fence" title="Bloco de código">⌗</button>
+              <button type="button" data-el="hr" title="Divisor">―</button>
+            </div>
+            <div class="editor__scroll">
+              <textarea class="editor__source" id="file-body" placeholder="Comece a escrever…  Digite / para comandos"></textarea>
+              <div class="editor__code" id="code-editor" hidden></div>
+              <div class="editor__preview markdown" id="file-preview" hidden></div>
+              <div class="html-stage" id="html-stage" hidden>
+                <div class="html-stage__bar">
+                  <div class="html-stage__traffic" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <div class="html-stage__url" id="html-stage-url">preview.html</div>
+                  <div class="html-stage__sizes" id="html-stage-sizes">
+                    <button type="button" data-html-size="fluid" class="is-active">Página</button>
+                    <button type="button" data-html-size="390">Celular</button>
+                    <button type="button" data-html-size="768">Tablet</button>
+                  </div>
+                </div>
+                <div class="html-stage__canvas">
+                  <div class="html-stage__device" id="html-stage-device">
+                    <iframe
+                      class="editor__html"
+                      id="html-preview"
+                      sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
+                      title="Preview HTML"
+                    ></iframe>
+                  </div>
+                </div>
+              </div>
+              <div class="pdf-stage" id="pdf-stage" hidden>
+                <iframe class="pdf-stage__frame" id="pdf-frame" title="PDF"></iframe>
+              </div>
+              <div class="draw-stage" id="draw-stage" hidden>
+                <canvas class="draw-canvas" id="draw-canvas"></canvas>
+
+                <div class="draw-hud draw-hud--tl" id="draw-history">
+                  <button type="button" data-draw-action="undo" title="Desfazer (Ctrl+Z)">
+                    <svg viewBox="0 0 20 20"><path d="M7 5 3.5 8.5 7 12"/><path d="M3.5 8.5h7a4.5 4.5 0 0 1 0 9H8"/></svg>
+                  </button>
+                  <button type="button" data-draw-action="redo" title="Refazer (Ctrl+Shift+Z)">
+                    <svg viewBox="0 0 20 20"><path d="M13 5l3.5 3.5L13 12"/><path d="M16.5 8.5h-7a4.5 4.5 0 0 0 0 9H12"/></svg>
+                  </button>
+                  <span class="draw-hud__sep"></span>
+                  <button type="button" data-draw-action="grid" class="is-active" title="Pontilhado">
+                    <svg viewBox="0 0 20 20" stroke="none" fill="currentColor"><circle cx="5" cy="5" r="1.3"/><circle cx="10" cy="5" r="1.3"/><circle cx="15" cy="5" r="1.3"/><circle cx="5" cy="10" r="1.3"/><circle cx="10" cy="10" r="1.3"/><circle cx="15" cy="10" r="1.3"/><circle cx="5" cy="15" r="1.3"/><circle cx="10" cy="15" r="1.3"/><circle cx="15" cy="15" r="1.3"/></svg>
+                  </button>
+                </div>
+
+                <div class="draw-hud draw-hud--bl" id="draw-zoom">
+                  <button type="button" data-draw-action="zoom-out" title="Diminuir">
+                    <svg viewBox="0 0 20 20"><path d="M5 10h10"/></svg>
+                  </button>
+                  <button type="button" class="draw-hud__zoom" data-draw-action="zoom-reset" title="Voltar a 100%">100%</button>
+                  <button type="button" data-draw-action="zoom-in" title="Aumentar">
+                    <svg viewBox="0 0 20 20"><path d="M10 5v10M5 10h10"/></svg>
+                  </button>
+                  <span class="draw-hud__sep"></span>
+                  <button type="button" data-draw-action="zoom-fit" title="Ajustar ao conteúdo (Shift+1)">
+                    <svg viewBox="0 0 20 20"><path d="M4 7.5V4h3.5M16 12.5V16h-3.5M16 7.5V4h-3.5M4 12.5V16h3.5"/></svg>
+                  </button>
+                </div>
+
+                <div class="draw-tools" id="draw-tools">
+                  <button type="button" data-tool="select" class="is-active" title="Selecionar (V)">
+                    <svg viewBox="0 0 20 20"><path d="M5 3.5l10.5 6-4.4 1.2L9 16.5z" stroke-linejoin="round"/></svg>
+                  </button>
+                  <button type="button" data-tool="hand" title="Mover tela (H)">
+                    <svg viewBox="0 0 20 20"><path d="M7 9V4.8a1.3 1.3 0 0 1 2.6 0V9m0-.6V4a1.3 1.3 0 0 1 2.6 0v5m0-.4V5.6a1.3 1.3 0 0 1 2.6 0V11a5.5 5.5 0 0 1-5.5 5.5H9A4.6 4.6 0 0 1 4.4 12V9.6a1.3 1.3 0 0 1 2.6 0" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="draw-tools__sep"></span>
+                  <button type="button" data-tool="rect" title="Retângulo (R)">
+                    <svg viewBox="0 0 20 20"><rect x="3.5" y="5" width="13" height="10" rx="2"/></svg>
+                  </button>
+                  <button type="button" data-tool="ellipse" title="Elipse (O)">
+                    <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.2"/></svg>
+                  </button>
+                  <button type="button" data-tool="diamond" title="Losango (D)">
+                    <svg viewBox="0 0 20 20"><path d="M10 3.4 16.6 10 10 16.6 3.4 10z" stroke-linejoin="round"/></svg>
+                  </button>
+                  <button type="button" data-tool="arrow" title="Seta (A)">
+                    <svg viewBox="0 0 20 20"><path d="M3.5 16.5 16 4"/><path d="M10.5 4H16v5.5" stroke-linejoin="round"/></svg>
+                  </button>
+                  <button type="button" data-tool="line" title="Linha (L)">
+                    <svg viewBox="0 0 20 20"><path d="M3.5 16.5 16.5 3.5"/></svg>
+                  </button>
+                  <button type="button" data-tool="draw" title="Lápis (P)">
+                    <svg viewBox="0 0 20 20"><path d="M3.5 16.5l1-3.4L13.2 4.4a1.9 1.9 0 0 1 2.7 2.7L7.2 15.8z" stroke-linejoin="round"/></svg>
+                  </button>
+                  <button type="button" data-tool="text" title="Texto (T)">
+                    <svg viewBox="0 0 20 20"><path d="M4.5 5h11M10 5v11"/></svg>
+                  </button>
+                  <button type="button" data-tool="eraser" title="Borracha (E)">
+                    <svg viewBox="0 0 20 20"><path d="m8 16.5 8.2-8.2a1.8 1.8 0 0 0 0-2.5l-2-2a1.8 1.8 0 0 0-2.5 0L3.5 12l4.5 4.5z" stroke-linejoin="round"/><path d="M16.5 16.5H8"/></svg>
+                  </button>
+                </div>
+
+                <div class="draw-style" id="draw-style" hidden>
+                  <div class="draw-style__row">
+                    <span class="draw-style__label">Traço</span>
+                    <span class="draw-style__swatches" id="draw-stroke"></span>
+                  </div>
+                  <div class="draw-style__row">
+                    <span class="draw-style__label">Fundo</span>
+                    <span class="draw-style__swatches" id="draw-fill"></span>
+                  </div>
+                  <div class="draw-style__row">
+                    <span class="draw-style__label">Espessura</span>
+                    <span class="draw-style__swatches" id="draw-width"></span>
+                  </div>
+                  <div class="draw-style__row" id="draw-font-row">
+                    <span class="draw-style__label">Texto</span>
+                    <span class="draw-style__swatches" id="draw-font"></span>
+                  </div>
+                  <div class="draw-style__sep"></div>
+                  <div class="draw-style__grid">
+                    <button type="button" class="draw-style__btn" data-draw-action="front" title="Trazer para frente">Frente</button>
+                    <button type="button" class="draw-style__btn" data-draw-action="back" title="Enviar para trás">Trás</button>
+                    <button type="button" class="draw-style__btn" data-draw-action="duplicate" title="Duplicar (Ctrl+D)">Duplicar</button>
+                    <button type="button" class="draw-style__btn draw-style__btn--danger" data-draw-action="delete" title="Apagar (Del)">Apagar</button>
+                  </div>
+                </div>
+              </div>
+              <div class="editor__db" id="file-db" hidden></div>
+              <textarea class="editor__schema" id="file-schema" hidden spellcheck="false"></textarea>
+              <div class="editor__diagram" id="file-diagram" hidden></div>
+            </div>
+            <div class="editor__status" id="editor-status"></div>
+          </article>
+          <aside class="details" id="details" hidden>
+            <div class="details__head">
+              <span>Detalhes</span>
+              <button class="icon-btn" id="close-details" type="button" title="Fechar">×</button>
+            </div>
+            <div class="details__body" id="details-body"></div>
+          </aside>
+        </main>
+        <aside class="chat" id="chat" hidden>
+          <div class="chat__head">
+            <span class="chat__title">IA local</span>
+            <div class="chat__head-actions">
+              <button class="text-btn" id="chat-new" type="button" title="Novo chat">Novo</button>
+              <button class="icon-btn" id="close-chat" type="button" title="Fechar">×</button>
+            </div>
+          </div>
+          <div class="chat__context" id="chat-context"></div>
+          <div class="chat__log" id="chat-log"></div>
+          <form class="chat__form" id="chat-form">
+            <textarea id="chat-input" rows="2" placeholder="Pergunte sobre este arquivo…"></textarea>
+            <button class="chat__send" id="chat-send" type="submit" title="Enviar">↑</button>
+          </form>
+        </aside>
+      </div>
+    </div>
+
+    <div class="welcome" id="welcome" hidden>
+      <div class="welcome__card">
+        <h1>Seu cofre de arquivos</h1>
+        <p>Escolha uma pasta do disco para guardar seus arquivos. Nada sai dela.</p>
+        <div class="welcome__actions">
+          <button class="btn btn--primary" id="welcome-open" type="button">Abrir pasta existente</button>
+          <button class="btn" id="welcome-create" type="button">Criar novo cofre</button>
+        </div>
+        <div class="welcome__list" id="welcome-list"></div>
+        <div class="welcome__hint" id="welcome-hint"></div>
+      </div>
+    </div>
+
+    <div class="modal" id="settings" hidden>
+      <div class="modal__scrim" data-close-modal="settings"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <span>Configurações</span>
+          <button class="icon-btn" type="button" data-close-modal="settings">×</button>
+        </div>
+        <div class="modal__tabs" id="settings-tabs">
+          <button type="button" data-settings-tab="vaults" class="is-active">Cofres</button>
+          <button type="button" data-settings-tab="preview">Preview e CSP</button>
+          <button type="button" data-settings-tab="llm">IA / LLM</button>
+        </div>
+        <div class="modal__body" id="settings-body"></div>
+      </div>
+    </div>
+
+    <div class="modal" id="graph" hidden>
+      <div class="modal__scrim" data-close-modal="graph"></div>
+      <div class="modal__card modal__card--wide">
+        <div class="modal__head">
+          <span>Grafo do cofre</span>
+          <div class="modal__head-actions">
+            <button class="text-btn" id="graph-copy" type="button" title="Copiar o grafo em Markdown para a IA">
+              Copiar para IA
+            </button>
+            <button class="text-btn" id="graph-save" type="button" title="Salvar mapa do cofre como arquivo">
+              Salvar mapa
+            </button>
+            <button class="icon-btn" type="button" data-close-modal="graph">×</button>
+          </div>
+        </div>
+        <div class="graph" id="graph-canvas"></div>
+        <div class="graph__legend" id="graph-legend"></div>
+      </div>
+    </div>
+
+    <div class="palette" id="palette" hidden>
+      <div class="palette__scrim" data-close-palette></div>
+      <div class="palette__card">
+        <input id="palette-input" type="text" placeholder="Buscar arquivo, pasta ou comando…" autocomplete="off" />
+        <div class="palette__list" id="palette-list"></div>
+      </div>
+    </div>
+
+    <div class="context-menu" id="context-menu" hidden></div>
+    <div class="slash-menu" id="slash-menu" hidden></div>
+
+    <script src="node_modules/monaco-editor/min/vs/loader.js"></script>
+    <script src="code-editor.js"></script>
+    <script src="database.js"></script>
+    <script src="table.js"></script>
+    <script src="markdown.js"></script>
+    <script src="links.js"></script>
+    <script src="draw.js"></script>
+    <script src="graph.js"></script>
+    <script src="local-llm.js"></script>
+    <script src="chat.js"></script>
+    <script src="renderer.js"></script>
+  </body>
+</html>

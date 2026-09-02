@@ -65,7 +65,8 @@
   function ensureWorker() {
     if (worker) return worker;
     if (!supported()) throw new Error("Este ambiente não tem Web Worker");
-    worker = new Worker(new URL("./llm-worker.js", document.baseURI), { type: "module" });
+    // Bundle elimina imports bare (ex.: onnxruntime-web/webgpu), que o protocolo customizado não resolve.
+    worker = new Worker(new URL("./llm-worker.bundle.js", document.baseURI));
     worker.addEventListener("message", (event) => {
       const data = event.data || {};
       const entry = pending.get(data.id);
@@ -84,7 +85,10 @@
       else entry.resolve(data);
     });
     worker.addEventListener("error", (event) => {
-      const message = event.message || "falha ao iniciar o worker da IA";
+      const detail = event.error?.stack || event.error?.message || event.message || "falha desconhecida";
+      const source = event.filename ? ` (${event.filename}:${event.lineno || 0}:${event.colno || 0})` : "";
+      const message = `falha ao iniciar o worker da IA: ${detail}${source}`;
+      console.error("LLM worker error", event.error || event);
       setState({ phase: "error", error: message });
       for (const [, entry] of pending) entry.reject(new Error(message));
       pending.clear();

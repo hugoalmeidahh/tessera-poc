@@ -145,6 +145,8 @@
       { key: "map", label: "mapa do cofre", on: include.map },
     ];
     const model = modelLabel();
+    const phase = window.LocalLLM?.state?.().phase || "idle";
+    const status = phase === "ready" || phase === "generating" ? "ready" : phase === "loading" ? "loading" : phase === "error" ? "error" : "idle";
     els.context.innerHTML = `${chips
       .map(
         (chip) =>
@@ -152,7 +154,7 @@
             chip.label
           )}</button>`
       )
-      .join("")}<span class="chat__model">${escapeHtml(model)}</span>`;
+      .join("")}<span class="chat__model llm-status llm-status--${status}"><i></i>${escapeHtml(model)}</span>`;
   }
 
   function renderLog() {

@@ -10,6 +10,9 @@
   "main": "main.js",
   "scripts": {
     "start": "node start.js",
+    "build:llm": "esbuild llm-worker.js --bundle --format=iife --platform=browser --target=es2022 --outfile=llm-worker.bundle.js",
+    "prestart": "npm run build:llm",
+    "predist": "npm run build:llm",
     "dist": "electron-builder --linux --win",
     "dist:linux": "electron-builder --linux",
     "dist:win": "electron-builder --win",
@@ -37,7 +40,7 @@
       "draw.js",
       "graph.js",
       "links.js",
-      "llm-worker.js",
+      "llm-worker.bundle.js",
       "local-llm.js",
       "markdown.js",
       "table.js",
@@ -57,7 +60,7 @@
     },
     "win": {
       "target": [
-        "zip"
+        "nsis"
       ],
       "signAndEditExecutable": false
     },
@@ -75,7 +78,8 @@
   },
   "devDependencies": {
     "electron": "^43.4.1",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",

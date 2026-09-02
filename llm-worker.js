@@ -1,26 +1,31 @@
 /*
- * Worker de módulo: carrega e roda o modelo dentro da própria janela, via WebGPU.
+ * Worker clássico: carrega e roda o modelo dentro da própria janela, via WebGPU.
  * Só funciona porque o app é servido pelo esquema vault-app:// (origem segura);
  * em file:// o Chromium bloqueia worker de módulo, WebGPU e Cache API.
  */
-import {
-  env,
-  pipeline,
-  TextStreamer,
-  InterruptableStoppingCriteria,
-} from "./node_modules/@huggingface/transformers/dist/transformers.web.js";
+let env;
+let pipeline;
+let TextStreamer;
+let runtime;
 
-env.allowLocalModels = false;
-env.allowRemoteModels = true;
-env.useBrowserCache = true;
-env.cacheKey = "vault-llm-v1";
-// Runtime ONNX servido do próprio app, não de CDN.
-env.backends.onnx.wasm.wasmPaths = new URL(
-  "./node_modules/onnxruntime-web/dist/",
-  self.location.href
-).href;
-// Threads de WASM exigem SharedArrayBuffer, que exige COOP/COEP. Não vale o risco.
-env.backends.onnx.wasm.numThreads = 1;
+async function initRuntime() {
+  if (runtime) return runtime;
+  runtime = import("./node_modules/@huggingface/transformers/dist/transformers.web.js").then((module) => {
+    ({ env, pipeline, TextStreamer } = module);
+    env.allowLocalModels = false;
+    env.allowRemoteModels = true;
+    env.useBrowserCache = true;
+    env.cacheKey = "vault-llm-v1";
+    // Runtime ONNX servido do próprio app, não de CDN.
+    env.backends.onnx.wasm.wasmPaths = new URL(
+      "./node_modules/onnxruntime-web/dist/",
+      self.location.href
+    ).href;
+    // Threads de WASM exigem SharedArrayBuffer, que exige COOP/COEP. Não vale o risco.
+    env.backends.onnx.wasm.numThreads = 1;
+  });
+  return runtime;
+}
 
 let generator = null;
 let loaded = { modelId: "", dtype: "", device: "" };
@@ -47,6 +52,7 @@ function post(payload) {
 }
 
 async function load(id, { modelId, dtype, device }) {
+  await initRuntime();
   const gpu = await gpuReport();
   const wantedDevice = device || (gpu.available ? "webgpu" : "wasm");
   // q4f16 depende de shader-f16; sem isso o carregamento estoura no meio.
@@ -102,8 +108,8 @@ async function load(id, { modelId, dtype, device }) {
 }
 
 async function chat(id, { messages, options }) {
+  await initRuntime();
   if (!generator) throw new Error("Modelo não carregado");
-  stopper = new InterruptableStoppingCriteria();
   const streamer = new TextStreamer(generator.tokenizer, {
     skip_prompt: true,
     skip_special_tokens: true,
@@ -119,10 +125,7 @@ async function chat(id, { messages, options }) {
     do_sample: (options?.temperature ?? 0.4) > 0,
     repetition_penalty: options?.repetitionPenalty ?? 1.05,
     streamer,
-    stopping_criteria: stopper,
   });
-
-  stopper = null;
   const generated = output?.[0]?.generated_text;
   const text = Array.isArray(generated)
     ? generated.at(-1)?.content || ""
@@ -134,6 +137,7 @@ self.addEventListener("message", async (event) => {
   const { id, type } = event.data || {};
   try {
     if (type === "probe") {
+      await initRuntime();
       post({ id, type: "probe", gpu: await gpuReport(), loaded: { ...loaded } });
       return;
     }
@@ -146,7 +150,6 @@ self.addEventListener("message", async (event) => {
       return;
     }
     if (type === "stop") {
-      stopper?.interrupt();
       post({ id, type: "stopped" });
       return;
     }

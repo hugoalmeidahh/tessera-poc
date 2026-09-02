@@ -1772,6 +1772,17 @@ function renderSettings() {
   const engine = window.LocalLLM;
   const catalog = engine?.CATALOG || [];
   const chosen = llm.localModel || engine?.DEFAULT_MODEL || "";
+  const localState = engine?.state?.() || { phase: "idle", percent: 0 };
+  const localStatus =
+    localState.phase === "ready"
+      ? `Pronto · ${localState.device === "webgpu" ? "GPU" : "CPU"}`
+      : localState.phase === "loading"
+        ? `Baixando/carregando · ${Math.round(localState.percent || 0)}%`
+        : localState.phase === "error"
+          ? `Falhou · ${localState.error || "erro desconhecido"}`
+          : "Não carregado";
+  const localStatusKind =
+    localState.phase === "ready" ? "ready" : localState.phase === "loading" ? "loading" : localState.phase === "error" ? "error" : "idle";
   els.settingsBody.innerHTML = `
     <div class="setting">
       <div class="setting__label">Onde a IA roda</div>
@@ -1812,6 +1823,10 @@ function renderSettings() {
         ${escapeHtml(catalog.find((item) => item.id === chosen)?.note || "")}
         Os pesos ficam no cache da janela; baixa só na primeira conversa.
       </p>
+      <div class="setting__row">
+        <span class="llm-status llm-status--${localStatusKind}"><i></i>${escapeHtml(localStatus)}</span>
+        <button class="btn" type="button" id="llm-load"${localState.phase === "loading" ? " disabled" : ""}>${localState.phase === "ready" ? "Recarregar modelo" : "Baixar e carregar"}</button>
+      </div>
     </div>
     <div class="setting">
       <div class="setting__label">Resposta máxima (tokens)</div>
@@ -2357,6 +2372,21 @@ els.settings?.addEventListener("click", async (event) => {
     // Trocar de modelo descarrega o anterior: dois pesos na memória não cabem.
     await window.LocalLLM?.unload();
     await patchConfig("llm.localModel", pickLocal.dataset.pickLocal);
+    renderSettings();
+    return;
+  }
+  if (event.target.id === "llm-load") {
+    const status = document.getElementById("llm-status");
+    const engine = window.LocalLLM;
+    const model = state.config?.llm?.localModel || engine?.DEFAULT_MODEL;
+    if (status) status.textContent = "Baixando e carregando…";
+    try {
+      await engine?.unload();
+      await engine?.load(model);
+      if (status) status.textContent = "Modelo pronto";
+    } catch (err) {
+      if (status) status.textContent = `Falhou: ${err.message || String(err)}`;
+    }
     renderSettings();
     return;
   }

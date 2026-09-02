@@ -19,16 +19,16 @@ jobs:
         include:
           - name: macOS Apple Silicon
             os: macos-14
-            command: npm run dist:mac -- --arm64
+            command: npm run dist:mac -- --arm64 --publish never
           - name: macOS Intel
             os: macos-13
-            command: npm run dist:mac -- --x64
+            command: npm run dist:mac -- --x64 --publish never
           - name: Linux x64
             os: ubuntu-latest
-            command: npm run dist:linux -- --x64
+            command: npm run dist:linux -- --x64 --publish never
           - name: Windows x64
             os: windows-latest
-            command: npm run dist:win -- --x64
+            command: npm run dist:win -- --x64 --publish never
 
     steps:
       - uses: actions/checkout@v4

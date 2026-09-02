@@ -1,7 +1,7 @@
 {
   "name": "vault-app",
   "productName": "Arquivos",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Cofre de arquivos com notas, desenho, banco e IA local",
   "license": "ISC",
   "author": "hugo almeida",

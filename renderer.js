@@ -1921,6 +1921,8 @@ function render() {
   if (els.toggleSidebar) els.toggleSidebar.title = collapsed ? "Mostrar pastas" : "Ocultar pastas";
 }
 
+window.addEventListener("chat:tools-applied", () => refresh());
+
 async function refresh(selectId = state.fileId) {
   if (!api) {
     render();

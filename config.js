@@ -7,7 +7,7 @@ const DEFAULTS = {
   llm: {
     // "browser" roda o modelo dentro do app; os outros falam com um servidor.
     provider: "browser",
-    localModel: "onnx-community/Qwen3-0.6B-ONNX",
+    localModel: "onnx-community/gemma-4-E2B-it-ONNX",
     baseUrl: "http://127.0.0.1:11434",
     apiKey: "",
     model: "",
@@ -43,6 +43,11 @@ function merge(base, extra) {
 
 function createConfig(file) {
   let data = merge(DEFAULTS, readFile());
+  // Migra seleções antigas para o único modelo Browser suportado.
+  if (data.llm?.provider === "browser" && data.llm.localModel !== DEFAULTS.llm.localModel) {
+    data.llm.localModel = DEFAULTS.llm.localModel;
+    persist();
+  }
 
   function readFile() {
     try {

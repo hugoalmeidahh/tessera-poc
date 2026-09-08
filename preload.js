@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld("api", {
     onOpened: (callback) => on("vault:opened", callback),
   },
 
+  tools: {
+    apply: (actions) => ipcRenderer.invoke("tools:apply", actions),
+  },
+
   files: {
     list: () => ipcRenderer.invoke("files:list"),
     read: (id) => ipcRenderer.invoke("files:read", id),

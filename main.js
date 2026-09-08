@@ -14,6 +14,7 @@ const { execFile } = require("child_process");
 const { pathToFileURL } = require("url");
 const { createVault, inspectFolder } = require("./vault");
 const { createConfig } = require("./config");
+const { validateActions } = require("./tool-actions");
 
 // A janela é servida por um esquema próprio, não por file://. Origem opaca de
 // file:// derruba WebGPU, worker de módulo e Cache API — que é o que a IA local usa.
@@ -461,6 +462,29 @@ function registerIpc() {
     })
   );
   ipcMain.handle("vault:stats", wrap(() => requireVault().stats()));
+
+  ipcMain.handle(
+    "tools:apply",
+    wrap(async (_event, payload) => {
+      const vault = requireVault();
+      const rootPrefix = vault.root.replaceAll("\\", "/").replace(/^\/+/, "") + "/";
+      const actions = validateActions(payload).map((action) => ({
+        ...action,
+        // Modelos às vezes removem a barra inicial de um caminho absoluto.
+        path: action.path.startsWith(rootPrefix) ? action.path.slice(rootPrefix.length) : action.path,
+      }));
+      return withWrite(async () => {
+        const results = [];
+        for (const action of actions) {
+          const exists = await vault.read(action.path).then(() => true).catch(() => false);
+          if (action.type === "file.create" && exists) throw new Error(`Arquivo já existe: ${action.path}`);
+          // Planos de IA podem marcar incorretamente um arquivo novo como escrita.
+          results.push(await vault.writeRaw(action.path, action.body, { create: !exists }));
+        }
+        return results;
+      });
+    })
+  );
 
   ipcMain.handle("files:list", wrap(() => (vault ? vault.list() : [])));
   ipcMain.handle("files:read", wrap((_event, id) => requireVault().read(id)));

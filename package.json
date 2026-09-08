@@ -44,6 +44,7 @@
       "local-llm.js",
       "markdown.js",
       "table.js",
+      "tool-actions.js",
       "node_modules/monaco-editor/min/**",
       "node_modules/@huggingface/transformers/dist/**",
       "node_modules/onnxruntime-web/dist/**",

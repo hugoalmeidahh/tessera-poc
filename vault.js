@@ -98,9 +98,8 @@ function createVault(root) {
   }
 
   function isVaultFile(name) {
-    const lower = name.toLowerCase();
-    if (lower.endsWith(".table.json") || lower.endsWith(".draw.json")) return true;
-    return [".md", ".markdown", ".txt", ".html", ".htm", ".pdf"].some((ext) => lower.endsWith(ext));
+    // Arquivos criados pela IA podem usar qualquer extensão, mas arquivos internos seguem ocultos.
+    return Boolean(name) && !String(name).startsWith(".");
   }
 
   function extFor(format) {
@@ -211,7 +210,7 @@ function createVault(root) {
     const stat = await fs.stat(filePath);
     const relativePath = toRel(filePath);
     const meta = fileMeta(filePath);
-    const body = TEXT_FORMATS.has(meta.format) ? await fs.readFile(filePath, "utf8") : "";
+    const body = meta.format === "pdf" ? "" : await fs.readFile(filePath, "utf8");
     return {
       id: relativePath,
       folderId: folderIdFromRel(relativePath),
@@ -306,6 +305,19 @@ function createVault(root) {
       await remove(toRel(file));
     }
     await fs.rm(dir, { recursive: true, force: true });
+  }
+
+  async function writeRaw(relativePath, body, { create = false } = {}) {
+    await ensureRoot();
+    const filePath = resolveInVault(relativePath);
+    if (!create && !fsSync.existsSync(filePath)) throw new Error("Arquivo não encontrado");
+    if (fsSync.existsSync(filePath) && !create) {
+      const stat = await fs.stat(filePath);
+      if (!stat.isFile()) throw new Error("O destino não é um arquivo");
+    }
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, body, "utf8");
+    return fileFromPath(filePath);
   }
 
   async function create({ folderId = "", format = "md", title } = {}) {
@@ -448,6 +460,7 @@ function createVault(root) {
     absolute,
     create,
     write,
+    writeRaw,
     move,
     remove,
     restore,

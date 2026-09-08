@@ -5,35 +5,11 @@
    */
   const CATALOG = [
     {
-      id: "onnx-community/Qwen2.5-0.5B-Instruct",
-      label: "Qwen2.5 0.5B",
-      size: "~470 MB",
-      note: "Mais leve. Roda até sem GPU, mas escreve pouco.",
-    },
-    {
-      id: "onnx-community/Qwen3-0.6B-ONNX",
-      label: "Qwen3 0.6B",
-      size: "~590 MB",
-      note: "Bom equilíbrio para o cofre. Padrão.",
-      default: true,
-    },
-    {
-      id: "onnx-community/Llama-3.2-1B-Instruct-ONNX",
-      label: "Llama 3.2 1B",
-      size: "~1,0 GB",
-      note: "Responde melhor em texto corrido. Quer GPU.",
-    },
-    {
-      id: "onnx-community/Qwen2.5-1.5B-Instruct",
-      label: "Qwen2.5 1.5B",
-      size: "~1,2 GB",
-      note: "O mais capaz da lista. Exige GPU com folga de memória.",
-    },
-    {
       id: "onnx-community/gemma-4-E2B-it-ONNX",
       label: "Gemma 4 E2B",
       size: "~1,5 GB",
-      note: "O mesmo que o LocalStudio usa no WebGPU.",
+      note: "Modelo local suportado. Prefira WebGPU; CPU/WASM pode ser lento.",
+      default: true,
     },
   ];
 
